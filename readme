@@ -6,7 +6,7 @@ The project focuses on understanding the internal behavior of Transformer compon
 
 ## Background
 
-The initial implementation was developed as part of the CS336 coursework. I used the tests provided by the course to verify the correctness of my implementation of the main Transformer components.
+The initial implementation was developed as part of the Stanford CS336 coursework. I used the tests provided by the course to verify the correctness of my implementation of the main Transformer components.
 
 After completing the core implementation, I extended the project to investigate training behavior and the effects of different design choices.
 
