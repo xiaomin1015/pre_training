@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+*.bin
+checkpoints/
+
+# Experiment tracking
+wandb/
+
+# Large generated files
+data/
+logs/

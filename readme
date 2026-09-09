@@ -1,0 +1,121 @@
+# Transformer Language Model
+
+This project implements a small Transformer language model from scratch in PyTorch.
+
+The project focuses on understanding the internal behavior of Transformer components through implementation detail and ablation experiments rather than only achieving the best validation loss.
+
+## Background
+
+The initial implementation was developed as part of the CS336 coursework. I used the tests provided by the course to verify the correctness of my implementation of the main Transformer components.
+
+After completing the core implementation, I extended the project to investigate training behavior and the effects of different design choices.
+
+## Project Goals
+* Implement a Transformer language model from scratch in PyTorch.
+* Understand the mathematical and implementation details behind each component.
+* Study how initialization and normalization choices affect training.
+* Perform controlled ablation experiments and analyze their effects on model behavior.
+
+## Implements Features
+
+* Transformer language model
+* Multi-Head Self-Attention
+* Rotary Positional Embeddings (RoPE)
+* RMSNorm
+* SwiGLU feed-forward network
+* Residual connections
+* AdamW optimizer
+* Cross-entropy loss
+* Autoregressive text generation
+* Temperature and Top-p sampling
+* Training and validation loss tracking
+* Model checkpointing
+* Hyperparameter experiments
+
+## Project Structure
+
+```text
+.
+├── src/ # Model and generation
+├── configs/ # Training configurations
+├── experiments/ # Ablation experiment results 
+├── checkpoints/ # Saved model checkpoints
+├── hyperparameter_sweep/ # hyperparameter sweep results
+├── tokenizer/ # tokenizer
+├── training/ # training implementation, load checkpoint
+├── README.md
+└── pyproject.toml
+```
+
+## Training
+
+A training run can be configured with parameters such as:
+
+* learning rate
+* batch size
+* context length
+* number of layers
+* model dimension
+* number of attention heads
+* feed-forward dimension
+* number of training steps
+
+Training records training and validation loss during the run and periodically saves model checkpoints.
+
+## Hyperparameter Sweep
+
+I performed learning-rate sweeps to identify a reasonable training configuration.
+
+The sweep was conducted in multiple stages. An initial coarse search tested several learning rates, followed by a finer search around the best-performing region.
+
+For example:
+
+Initial search:
+0.001, 0.002, 0.004, 0.006
+
+Refined search:
+0.0007, 0.0009, 0.0010, 0.0012, 0.0015
+
+The refined sweep identified 0.0012 as the best-performing max_learning rate among the tested configurations. This value was then used for the subsequent experiments.
+
+## Experiments
+### RMSNorm Scale Ablation
+
+I compare:
+
+Baseline: RMSNorm with a learnable per-channel scale parameter (γ)
+No-weight: RMSNorm without the learnable scale parameter
+
+Both models use the same architecture and training setup except for the RMSNorm scale parameters.
+
+I evaluate:
+
+* Training and validation loss
+* RMSNorm scale statistics
+* Activation RMS across layers
+* Attention parameter statistics
+* SwiGLU parameter statistics
+* Performance during continued training
+
+The experiment uses three random seeds and training runs of up to 6000 steps, followed by an additional continuation experiment from step 6000 to 9000.
+#### Key Findings
+
+The RMSNorm ablation shows that removing the learnable scale parameter does not prevent the Transformer from training. Check out the *experiments/Ablation: Removing the Learnable Weight from RMSNorm.md* for more details
+
+## Checkpoints
+
+Model checkpoints are saved at selected training iterations.
+
+For experiments where I only need to analyze the model, the checkpoint only contains the model parameters; It will save both model status as well as optimizer status on the last iteration of training, so that I can continue training from specifc checkpoint. *load_checkingPoint.py* implements this feature
+
+For checkpoint saving, make sure to give unique saving directory so that checkpoint wouldn't overwrite.
+
+*load_ckp.py* has other implementation that i used for my ablation experiement to get parameter's statistics and model activation(make sure to change model implementation accordingly when running baseline/ablation model for activation).
+
+## Running the Project
+
+Configure the experiment parameters in the corresponding configuration file, install required dependencies, set up a virtual environment and run the training script:
+```bash
+    uv run python -m training/train.py
+```
+

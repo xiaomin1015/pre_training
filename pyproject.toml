@@ -1,0 +1,25 @@
+[project]
+name = "transformer-training-study"
+version = "0.1.0"
+description = "Empirical study of training and architectural choices in a small Transformer language model"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+
+dependencies = [
+    "einops>=0.8",
+    "einx>=0.4",
+    "jaxtyping>=0.3",
+    "numpy>=2.4",
+    "psutil>=7",
+    "pyyaml>=6.0.3",
+    "regex>=2026.3.32",
+    "tiktoken>=0.12.0",
+    "torch~=2.11.0",
+    "tqdm>=4.67",
+    "wandb>=0.25",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.8",
+]

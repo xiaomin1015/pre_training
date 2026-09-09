@@ -1,0 +1,18 @@
+# round1
+# max_learning_rates:
+#  - 0.001
+#  - 0.002
+#  - 0.004
+#  - 0.006
+
+# round2
+#max_learning_rates:
+#  - 0.0007
+#  - 0.0009
+#  - 0.001
+#  - 0.0012
+#  - 0.0015
+# pick around 0.0012
+
+max_learning_rates:
+  - 0.0012
