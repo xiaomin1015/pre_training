@@ -36,7 +36,7 @@ After completing the core implementation, I extended the project to investigate 
 
 ```text
 .
-├── src/ # Model and generation
+├── src/ # Model and inference
 ├── configs/ # Training configurations
 ├── experiments/ # Ablation experiment results 
 ├── checkpoints/ # Saved model checkpoints

@@ -1,18 +1,18 @@
 # Ablation Study: Removing the Learnable Weight from RMSNorm
- 
+
 ## 1. Motivation and Research Question
 
 When I studied transformer weights, I read an explanation that learnable weights control how information flows through matrix multiplication. An elementwise weight is different. It only rescales each element of the input. It does not mix information across dimensions the way a matrix multiply does. So the elementwise weight feels less tightly coupled to the transformer architecture than the matrix-multiply weights are.
-
+ 
 I plan to explore: what happens if the learnable scale weight is removed from RMSNorm? My plan is to remove the learnable scale weight from RMSNorm and see what changes.
-
+ 
 I chose RMSNorm because it appears in every block of my model, plus in the final norm layer before the output. 
 
 
 
 ### Research Question
 
-The goal is to measure how the learnable scale affects training in three ways:
+The goal is to measure how the learnable scale affects training in following ways:
 
 **Optimization**
 - train loss vs. step curve
@@ -206,7 +206,8 @@ First compare the input RMS between baseline and no-weight for ln1:
     Layer 1: 1.0441 vs 2.4327 
     Layer 2: 1.6812 vs 4.1004 
     Layer 3: 2.5237 vs 5.9230 
-The two models develop very different activation scales before RMSNorm, and the gap widens with depth: the ablation model's input RMS grows faster with depth than the baseline's. That also apply to ln2.
+The two models develop very different activation scales before RMSNorm, and the gap widens with depth: the ablation model's input RMS grows faster with depth than the baseline's. 
+That also apply to ln2.
 
 Then let's look at the output activation:
 The no-weight model's RMSNorm output RMS is 1.0 for all RMSNorm layer, This is as expected: 
@@ -219,8 +220,8 @@ $$
 So come back to my previous question: does the ablation model lost control of magnitude of data flow at norm layer? It seems so. Its output scale is fixed at exactly 1.0 by construction, while the baseline model's output activation at RMSNorm consistently scale below 1, range from 0.41 to 0.66.
 Then does the ablation model find other way to compensate the magnitude control somewhere else?
 
-I compare these two models' attention weights and the SwiGLU weights
-here is checkpoint statistic of two models using seed 42 at step 6000
+I compare these two models' attention weights and the SwiGLU weights.
+Below is checkpoint statistic of two models using seed 42 at step 6000.
 
 **Q/K/V/O statistics**
 
@@ -258,7 +259,7 @@ The ablation model appears to compensate for the missing RMSNorm scale through c
 |     | w3     | 0.047        | 0.042          |  -10.6%|
 | 2     | w1     | 0.051        | 0.049          |  -3.9% |
 |      | w2     | 0.050        | 0.049          |  -2.0% |
-|      | w3     | 0.050        | 0.049          | - -2.0% |
+|      | w3     | 0.050        | 0.049          |  -2.0% |
 | 3     | w1     | 0.053        | 0.052          |  -1.9% |
 |      | w2     | 0.052        | 0.053          |  +1.9% |
 |      | w3     | 0.053        | 0.054          |  +1.9% |
@@ -267,7 +268,7 @@ The SwiGLU weights have similar magnitudes in the two models. So the no_weight m
 control data flow's magnitude more likely happend in attention scorce calculation, by adaptive
 Q, K weight. 
 ### 4.3 Mathematical relationship between γ and output RMS
-I found an interesting relationship when comparing the output RMS vs. mean weight of baseline's RNSNorm layers:
+I found an interesting relationship when comparing the output RMS vs. γ mean of baseline's RNSNorm layers:
 | Layer / LN  | Weight mean (baseline) | Output RMS (baseline) | Gap     | Gap %  |
 |:-----------:|:-----------------------:|:-----------------------:|:-------:|:------:|
 | Layer 0 LN1 | 0.411957                | 0.4107                  | -0.0013 | -0.31% |
@@ -279,16 +280,16 @@ I found an interesting relationship when comparing the output RMS vs. mean weigh
 | Layer 2 LN2 | 0.598735                | 0.5886                  | -0.0101 | -1.69% |
 | Layer 3 LN2 | 0.664543                | 0.6599                  | -0.0046 | -0.70% |
 
-The mean RMSNorm weight and output RMS are close across all layers, with less than 3% gap.
+The RMSNorm γ mean and output RMS are close across all layers, with less than 3% gap.
 
-Below is simple derivation of mean of weight vs. output RMS relationship:
+Below is simple derivation of relationship between mean of γ vs. output RMS:
 
 
 1) **What the weight multiply does**
  
 $$\text{output}_i = \gamma_i \cdot \hat{y}_i$$
  
-$$\text({RMS(output)})^2 = \mathbb{E}_i\left[\gamma_i^2 \hat{y}_i^2\right]$$
+$$(\text{RMS(output)})^2 = \mathbb{E}_i\left[\gamma_i^2 \hat{y}_i^2\right]$$
  
 In general, an average of **product** of $\gamma_i^2$ and $\hat{x}_i^2$ is not the average of a product is **not** the product of the averages.
  
@@ -297,9 +298,9 @@ In general, an average of **product** of $\gamma_i^2$ and $\hat{x}_i^2$ is not t
 For any two channel-indexed quantities $A_i, B_i$:
 $$\mathbb{E}_i[A_i B_i] = \mathbb{E}_i[A_i]\,\mathbb{E}_i[B_i] + \text{Cov}_i(A_i, B_i)$$
  
-Let $A_i = \gamma_i^2$ and $B_i = \hat{y}_i^2$. Using $\mathbb{E}_i[\hat{y}_i^2] = 1$ from Drivation of no weight ablation:
+Let $A_i = \gamma_i^2$ and $B_i = \hat{y}_i^2$. Using $\mathbb{E}_i[\hat{y}_i^2] = 1$ from derivation of no weight ablation:
  
-$$\text({RMS(output)})^2 = \mathbb{E}_i[\gamma_i^2] \cdot 1 + \text{Cov}_i(\gamma_i^2, \hat{y}_i^2) = \mathbb{E}_i[\gamma_i^2] + \text{Cov}_i(\gamma_i^2, \hat{y}_i^2)$$
+$$(\text{RMS(output)})^2 = \mathbb{E}_i[\gamma_i^2] \cdot 1 + \text{Cov}_i(\gamma_i^2, \hat{y}_i^2) = \mathbb{E}_i[\gamma_i^2] + \text{Cov}_i(\gamma_i^2, \hat{y}_i^2)$$
  
 
 3) **Relate mean(γ²) to mean(γ)**
@@ -320,26 +321,30 @@ b) Low covariance between weight and signal $\text{Cov}_i(\gamma_i^2, \hat{x}_i^
 I calculate the Cov(γ²,y²) value from the equation of previous derivation.
 
 
-| Layer / LN |  mean (γ) |  RMS (Output) | Var(γ) | Cov(γ²,y²) | \|Cov(γ²,y²)/ mean²\| | Var(γ)/ mean² |
+| Layer / LN |  mean (γ) |  RMS (Output) | Var(γ) | Cov(γ²,y²) | Cov(γ²,y²)/ mean² | Var(γ)/ mean² |
 |---|---|---|---|---|---|---|
-| Layer 0 LN1 | 0.411957 | 0.4107 | 0.0016 | -0.00263408 | 1.6% | 0.9% |
-| Layer 1 LN1 | 0.460789 | 0.4585 | 0.001681 | -0.003785253 | 1.8% | 0.8% |
-| Layer 2 LN1 | 0.557453 | 0.5512 | 0.001296 | -0.008228407 | 2.6% | 0.4% |
-| Layer 3 LN1 | 0.642788 | 0.6354 | 0.001369 | -0.010812253 | 2.6% | 0.3% |
-| Layer 0 LN2 | 0.524661 | 0.5212 | 0.001089 | -0.004708725 | 1.7% | 0.4% |
-| Layer 1 LN2 | 0.530776 | 0.5173 | 0.002025 | -0.016148872 | 5.7% | 0.7% |
-| Layer 2 LN2 | 0.598735 | 0.5886 | 0.002304 | -0.01433764 | 4.0% | 0.6% |
-| Layer 3 LN2 | 0.664543 | 0.6599 | 0.001521 | -0.007670389 | 1.7% | 0.3% |
+| Layer 0 LN1 | 0.411957 | 0.4107 | 0.0016 | -0.00263408 | -1.6% | 0.9% |
+| Layer 1 LN1 | 0.460789 | 0.4585 | 0.001681 | -0.003785253 | -1.8% | 0.8% |
+| Layer 2 LN1 | 0.557453 | 0.5512 | 0.001296 | -0.008228407 | -2.6% | 0.4% |
+| Layer 3 LN1 | 0.642788 | 0.6354 | 0.001369 | -0.010812253 | -2.6% | 0.3% |
+| Layer 0 LN2 | 0.524661 | 0.5212 | 0.001089 | -0.004708725 | -1.7% | 0.4% |
+| Layer 1 LN2 | 0.530776 | 0.5173 | 0.002025 | -0.016148872 | -5.7% | 0.7% |
+| Layer 2 LN2 | 0.598735 | 0.5886 | 0.002304 | -0.01433764 | -4.0% | 0.6% |
+| Layer 3 LN2 | 0.664543 | 0.6599 | 0.001521 | -0.007670389 | -1.7% | 0.3% |
 
-Both the covariance and variance terms are relatively small compared with (mean (γ))^2. 
-The variance of γ is small, while the negative covariance partially offsets the remaining difference. It suggests that the latter explanation, Low Var(γ) and Low Cov(γ²,y²) hypothesis, is more consistent with the observed behavior.
+Both the covariance and variance terms are relatively small compared with (mean (γ))^2.(0.3-0.9% and 1.6-5.7% respectively) 
+
+The variance of γ is small, while the negative covariance partially offsets the remaining difference. It suggests that the second explanation, Low Var(γ) and Low Cov(γ²,y²) hypothesis, is more consistent with the observed behavior.
 
 The low Var(γ) suggests RMSNorm weights vary relatively little across channels, the learned RMSNorm scale behaves more like a layer-level magnitude adjustment than a selective per-channel gating mechanism.
 
-So removing the learnable weight of RMSNorm does not stop the model from controlling representation magnitude. both two architectures reach comparable loss. They use different mechanisms controlling
-magnitude: a per-layer multiplicative gate in the baseline, while ablation model adaptively reorganize the attention weights
+## 4.4 Synthesis: γ's Role in RMSNorm
 
-From the comparism of baseline model's output RMS and the weight's own mean, I infer the weight is fairly uniformly across channels rather than selectively concentrated on a few dimensions. That also support that, without weight in RMSNorm, transfermer model can also adaptive and perform well.
+At the norm layer itself, removing γ does make the model lose magnitude control. There is no local mechanism left to shrink the signal the way the baseline's learned γ does. This shows up directly downstream: the no-weight model's pre-norm input RMS grows about 2.3-2.4x faster with depth than the baseline's (Section 4.2).
+
+What the two architectures share is comparable final loss. The no-weight model appears to partially compensate elsewhere. The clearest case is attention. Q and K shrink by 14-25% relative to baseline. This plausibly keeps attention scores from saturating, since the input they now receive is larger and unshrunk. So this looks like a partial, local patch. It is not a full substitute for what the norm layer's weight used to do.
+
+Separately, the closeness between baseline's γ mean and its own output RMS (Section 4.3) says something about how γ is structured internally: it varies relatively little across channels, rather than concentrating on a few dimensions.
 
 
 ## 5. Continued Training
@@ -375,7 +380,7 @@ The learnable RMSNorm weight gives a real, measurable early-training speed advan
 to egnore.
 
 
-## 7. Conclusion and Limitations
+## 6. Conclusion and Limitations
 ### conclution
 Removing the learnable scale parameter from RMSNorm will not prevent the Transformer from training.
 Without weight in RMSNorm, model's training is smooth. Even though the ablation model seems a little behide to the baseline, but the validation loss gap continued to narrow during the additional 3000 steps of training, suggesting that the no-weight model may partially recover the performance difference with further training.
@@ -387,8 +392,8 @@ Although RMSNorm γ provides a per-channel scaling mechanism, the relatively sma
 
 
 ### Limitation and Future Work
-1. Small model and small trainig data set
+1. Small model and small trainig data set.
 2. Only three random seeds were used.
-3. The attention-weight analysis is based on a single seed-42 checkpoint.
+3. The attention-weight analysis is based on a single seed-42 checkpoint a single batch of eval data.
 4. The Q/K weight changes are correlational and do not establish causality.
 5. Larger models and datasets should be tested.
